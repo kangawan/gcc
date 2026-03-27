@@ -156,9 +156,13 @@ enum rvv_vector_bits_enum {
      ? 0                                                                       \
      : 32 << (__builtin_popcount (opts->x_riscv_zvl_subext) - 1))
 
-/* The maximum LMUL according to user configuration.  */
+/* The maximum LMUL according to user configuration.  When vectorizing a loop
+   with early breaks the backend temporarily allows up to RVV_M8 regardless
+   of the user-specified limit (see riscv_early_break_vectorization_p).  */
+extern bool riscv_early_break_vectorization_p;
 #define TARGET_MAX_LMUL                                                        \
-  (int) ((rvv_max_lmul == RVV_DYNAMIC || rvv_max_lmul == RVV_CONV_DYNAMIC) \
+  (int) ((rvv_max_lmul == RVV_DYNAMIC || rvv_max_lmul == RVV_CONV_DYNAMIC     \
+	  || riscv_early_break_vectorization_p)                                \
 	 ? RVV_M8 : rvv_max_lmul)
 
 /* TLS types.  */

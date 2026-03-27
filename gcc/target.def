@@ -1995,6 +1995,18 @@ returns 0.",
  default_autovectorize_vector_modes)
 
 DEFHOOK
+(set_early_break_vectorization,
+ "Notify the backend whether the loop currently being analyzed has early\n\
+breaks.  If @var{is_early_break} is true, the backend may temporarily\n\
+override its vector-mode restrictions (e.g., @code{TARGET_MAX_LMUL}) to\n\
+allow wider vector modes for such loops.  The hook is called with\n\
+@code{false} after the analysis to restore the original state.\n\
+The default implementation does nothing.",
+ void,
+ (bool is_early_break),
+ NULL)
+
+DEFHOOK
 (related_mode,
  "If a piece of code is using vector mode @var{vector_mode} and also wants\n\
 to operate on elements of mode @var{element_mode}, return the vector mode\n\

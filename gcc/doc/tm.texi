@@ -6469,6 +6469,15 @@ for autovectorization.  The default implementation adds no modes and
 returns 0.
 @end deftypefn
 
+@deftypefn {Target Hook} void TARGET_VECTORIZE_SET_EARLY_BREAK_VECTORIZATION (bool @var{is_early_break})
+Notify the backend whether the loop currently being analyzed has early
+breaks.  If @var{is_early_break} is true, the backend may temporarily
+override its vector-mode restrictions (e.g., @code{TARGET_MAX_LMUL}) to
+allow wider vector modes for such loops.  The hook is called with
+@code{false} after the analysis to restore the original state.
+The default implementation does nothing.
+@end deftypefn
+
 @deftypefn {Target Hook} opt_machine_mode TARGET_VECTORIZE_RELATED_MODE (machine_mode @var{vector_mode}, scalar_mode @var{element_mode}, poly_uint64 @var{nunits})
 If a piece of code is using vector mode @var{vector_mode} and also wants
 to operate on elements of mode @var{element_mode}, return the vector mode

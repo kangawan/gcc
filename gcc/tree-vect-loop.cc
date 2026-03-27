@@ -2833,6 +2833,10 @@ vect_analyze_loop_1 (class loop *loop, vec_info_shared *shared,
 
   auto user_unroll = LOOP_VINFO_LOOP (loop_vinfo)->unroll;
   if (res && !LOOP_VINFO_EPILOGUE_P (loop_vinfo)
+      /* Don't unroll loops with early breaks; the scalar epilogue is
+	 required to find the exact early-exit position, and unrolling
+	 would complicate that without benefit.  */
+      && !LOOP_VINFO_EARLY_BREAKS (loop_vinfo)
       /* Check to see if the user wants to unroll or if the target wants to.  */
       && (suggested_unroll_factor > 1 || user_unroll > 1))
     {
@@ -2922,6 +2926,30 @@ vect_analyze_loop_1 (class loop *loop, vec_info_shared *shared,
   return opt_loop_vec_info::success (loop_vinfo);
 }
 
+/* Helper class to temporarily notify the backend that the loop being
+   analyzed has early breaks.  The constructor calls the hook with true
+   when ACTIVE is set, and the destructor resets it to false, ensuring
+   correct state restoration even on early return paths.  */
+class early_break_vectorization_guard
+{
+  bool m_active;
+public:
+  early_break_vectorization_guard (bool active) : m_active (active)
+  {
+    if (m_active && targetm.vectorize.set_early_break_vectorization)
+      targetm.vectorize.set_early_break_vectorization (true);
+  }
+  ~early_break_vectorization_guard ()
+  {
+    if (m_active && targetm.vectorize.set_early_break_vectorization)
+      targetm.vectorize.set_early_break_vectorization (false);
+  }
+  early_break_vectorization_guard (const early_break_vectorization_guard &)
+    = delete;
+  early_break_vectorization_guard &
+  operator= (const early_break_vectorization_guard &) = delete;
+};
+
 /* Function vect_analyze_loop.
 
    Apply a set of analyses on LOOP, and create a loop_vec_info struct
@@ -2971,6 +2999,20 @@ vect_analyze_loop (class loop *loop, gimple *loop_vectorized_call,
     /* Clear the existing niter information to make sure the nonwrapping flag
        will be calculated and set propriately.  */
     free_numbers_of_iterations_estimates (loop);
+
+  /* Determine whether this loop has early breaks so that the backend can
+     temporarily allow wider vector modes (e.g., a higher LMUL on RISC-V)
+     for the duration of the analysis.  Early breaks are present when there
+     are loop-exit conditions beyond the primary IV condition.  */
+  unsigned int eb_cond_offset
+    = chrec_contains_undetermined (loop_form_info.number_of_iterations)
+      ? 0 : 1;
+  bool has_early_breaks
+    = loop_form_info.conds.length () > eb_cond_offset;
+
+  /* Notify the backend of the early-break status.  The guard's destructor
+     will restore the state when we leave this scope (even on early return).  */
+  early_break_vectorization_guard eb_guard (has_early_breaks);
 
   auto_vector_modes vector_modes;
   /* Autodetect first vector size we try.  */
