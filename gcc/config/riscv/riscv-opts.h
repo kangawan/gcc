@@ -161,6 +161,14 @@ enum rvv_vector_bits_enum {
   (int) ((rvv_max_lmul == RVV_DYNAMIC || rvv_max_lmul == RVV_CONV_DYNAMIC) \
 	 ? RVV_M8 : rvv_max_lmul)
 
+/* The maximum LMUL for loops with early breaks.  Falls back to TARGET_MAX_LMUL
+   if -mrvv-early-break-max-lmul= is not explicitly set (i.e., defaults to
+   RVV_DYNAMIC).  */
+#define TARGET_EARLY_BREAK_MAX_LMUL                                            \
+  (int) ((rvv_early_break_max_lmul == RVV_DYNAMIC                              \
+	  || rvv_early_break_max_lmul == RVV_CONV_DYNAMIC)                     \
+	 ? TARGET_MAX_LMUL : rvv_early_break_max_lmul)
+
 /* TLS types.  */
 enum riscv_tls_type {
   TLS_TRADITIONAL,
