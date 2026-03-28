@@ -61,6 +61,30 @@ along with GCC; see the file COPYING3.  If not see
 #include "opts.h"
 #include "hierarchical_discriminator.h"
 
+/* RAII helper that notifies the backend when we are about to vectorize
+   an early-break loop.  Constructing it with ACTIVE=true calls
+   TARGET_VECTORIZE_SET_EARLY_BREAK_VECTORIZATION (true); the destructor
+   calls the hook with false to restore any saved target state.  */
+
+class early_break_vect_guard
+{
+  bool m_active;
+public:
+  early_break_vect_guard (bool active) : m_active (active)
+  {
+    if (m_active)
+      targetm.vectorize.set_early_break_vectorization (true);
+  }
+  ~early_break_vect_guard ()
+  {
+    if (m_active)
+      targetm.vectorize.set_early_break_vectorization (false);
+  }
+  /* Prevent copies to avoid double-restore of target state.  */
+  early_break_vect_guard (const early_break_vect_guard &) = delete;
+  early_break_vect_guard &operator= (const early_break_vect_guard &) = delete;
+};
+
 /* Loop Vectorization Pass.
 
    This pass tries to vectorize loops.
@@ -2971,6 +2995,22 @@ vect_analyze_loop (class loop *loop, gimple *loop_vectorized_call,
     /* Clear the existing niter information to make sure the nonwrapping flag
        will be calculated and set propriately.  */
     free_numbers_of_iterations_estimates (loop);
+
+  /* Determine whether this loop has early-break exits by checking whether
+     vect_analyze_loop_form found more conditions than just the loop IV
+     condition.  An uncounted loop (number_of_iterations == chrec_dont_know)
+     has no dedicated IV condition, so any condition is an early-break
+     condition.  A counted loop has the IV condition as the first entry,
+     so early breaks are present when there are additional entries.  */
+  bool has_early_breaks = (loop_form_info.conds.length () > 1
+			   || (chrec_contains_undetermined
+				 (loop_form_info.number_of_iterations)
+			       && !loop_form_info.conds.is_empty ()));
+
+  /* Activate the RAII guard for the entire analysis phase so the backend
+     can temporarily lift any LMUL restrictions for early-break loops.
+     The guard is destroyed (restoring backend state) at function exit.  */
+  early_break_vect_guard eb_guard (has_early_breaks);
 
   auto_vector_modes vector_modes;
   /* Autodetect first vector size we try.  */

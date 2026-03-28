@@ -2113,6 +2113,25 @@ it is for the vector version.",
  (vec_info *vinfo, bool costing_for_scalar),
  default_vectorize_create_costs)
 
+/* Notify the backend that an early-break loop is being vectorized.  When
+   ACTIVE is true, the backend may override its LMUL restrictions to allow
+   larger vector modes to be explored.  When ACTIVE is false, the backend
+   should restore any saved state.  The default implementation does
+   nothing.  */
+DEFHOOK
+(set_early_break_vectorization,
+ "This hook is called by the loop vectorizer to notify the backend that\n\
+it is about to vectorize (when @var{active} is @code{true}) or has\n\
+finished vectorizing (when @var{active} is @code{false}) a loop that\n\
+contains an early break.  The backend may use this to temporarily\n\
+override target-specific vectorization restrictions, for example to\n\
+allow larger LMUL values to be explored for RISC-V targets.\n\
+\n\
+The default implementation does nothing.",
+ void,
+ (bool active),
+ default_vectorize_set_early_break_vectorization)
+
 HOOK_VECTOR_END (vectorize)
 
 #undef HOOK_PREFIX

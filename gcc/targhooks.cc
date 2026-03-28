@@ -1658,6 +1658,14 @@ default_vectorize_create_costs (vec_info *vinfo, bool costing_for_scalar)
   return new vector_costs (vinfo, costing_for_scalar);
 }
 
+/* Default no-op implementation of TARGET_VECTORIZE_SET_EARLY_BREAK_VECTORIZATION.
+   Targets that do not need to adjust state for early-break loops do nothing.  */
+
+void
+default_vectorize_set_early_break_vectorization (bool)
+{
+}
+
 /* Determine whether or not a pointer mode is valid. Assume defaults
    of ptr_mode or Pmode - can be overridden.  */
 bool

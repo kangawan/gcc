@@ -14152,6 +14152,35 @@ riscv_autovectorize_vector_modes (vector_modes *modes, bool all)
   return default_autovectorize_vector_modes (modes, all);
 }
 
+/* Saved value of rvv_max_lmul used by riscv_set_early_break_vectorization.
+   GCC's vectorizer is single-threaded, so a plain static variable is safe
+   here; the RAII guard in the middle-end ensures saves and restores are
+   always properly paired.  */
+static enum rvv_max_lmul_enum riscv_saved_rvv_max_lmul;
+
+/* Implement TARGET_VECTORIZE_SET_EARLY_BREAK_VECTORIZATION.
+   When vectorizing an early-break loop, temporarily override rvv_max_lmul
+   to RVV_DYNAMIC so that the vectorizer can explore larger LMUL modes
+   beyond any user-specified limit (e.g. -mrvv-max-lmul=m2).
+   The original value is restored when ACTIVE is false.  */
+static void
+riscv_set_early_break_vectorization (bool active)
+{
+  if (!TARGET_VECTOR)
+    return;
+  if (active)
+    {
+      riscv_saved_rvv_max_lmul = rvv_max_lmul;
+      /* Only widen the search if the user hasn't already selected
+	 a dynamic mode; keep conv-dynamic as-is since it has its
+	 own selection logic.  */
+      if (rvv_max_lmul != RVV_DYNAMIC && rvv_max_lmul != RVV_CONV_DYNAMIC)
+	rvv_max_lmul = RVV_DYNAMIC;
+    }
+  else
+    rvv_max_lmul = riscv_saved_rvv_max_lmul;
+}
+
 /* Implement TARGET_VECTORIZE_RELATED_MODE.  */
 opt_machine_mode
 riscv_vectorize_related_mode (machine_mode vector_mode, scalar_mode element_mode,
@@ -16879,6 +16908,10 @@ riscv_prefetch_offset_address_p (rtx x, machine_mode mode)
 #undef TARGET_VECTORIZE_AUTOVECTORIZE_VECTOR_MODES
 #define TARGET_VECTORIZE_AUTOVECTORIZE_VECTOR_MODES \
   riscv_autovectorize_vector_modes
+
+#undef TARGET_VECTORIZE_SET_EARLY_BREAK_VECTORIZATION
+#define TARGET_VECTORIZE_SET_EARLY_BREAK_VECTORIZATION \
+  riscv_set_early_break_vectorization
 
 #undef TARGET_VECTORIZE_RELATED_MODE
 #define TARGET_VECTORIZE_RELATED_MODE riscv_vectorize_related_mode
