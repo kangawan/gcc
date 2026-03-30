@@ -61,6 +61,11 @@ along with GCC; see the file COPYING3.  If not see
 #include "opts.h"
 #include "hierarchical_discriminator.h"
 
+/* True while the vectorizer is analyzing a loop with early breaks
+   (multiple loop exits).  Target hooks such as autovectorize_vector_modes
+   can query this to adjust their behaviour.  */
+bool vect_loop_in_early_break = false;
+
 /* Loop Vectorization Pass.
 
    This pass tries to vectorize loops.
@@ -2971,6 +2976,13 @@ vect_analyze_loop (class loop *loop, gimple *loop_vectorized_call,
     /* Clear the existing niter information to make sure the nonwrapping flag
        will be calculated and set propriately.  */
     free_numbers_of_iterations_estimates (loop);
+
+  /* Determine whether this loop has early breaks (multiple exits).  For
+     counted loops the first condition is the main IV exit; any additional
+     conditions are early-break exits.  Instantiate the guard before asking
+     the target for vector modes so it can take early breaks into account.  */
+  bool has_early_breaks = loop_form_info.conds.length () > 1;
+  early_break_vectorization_guard eb_guard (has_early_breaks);
 
   auto_vector_modes vector_modes;
   /* Autodetect first vector size we try.  */

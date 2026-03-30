@@ -55,6 +55,10 @@
 
 using namespace riscv_vector;
 
+/* The vectorizer sets this to true while analysing a loop that has early
+   breaks (multiple exits).  Declared in tree-vectorizer.h.  */
+extern bool vect_loop_in_early_break;
+
 namespace riscv_vector {
 
 /* Return true if NUNITS <=31 so that we can use immediate AVL in vsetivli.  */
@@ -3081,9 +3085,17 @@ get_cmp_insn_code (rtx_code code, machine_mode mode)
 unsigned int
 autovectorize_vector_modes (vector_modes *modes, bool)
 {
+  /* When vectorizing an early-break loop and the user has specified a
+     maximum LMUL for such loops, cap the effective max LMUL accordingly.  */
+  int max_lmul = TARGET_MAX_LMUL;
+  if (vect_loop_in_early_break
+      && rvv_early_break_max_lmul != RVV_DYNAMIC
+      && rvv_early_break_max_lmul != RVV_CONV_DYNAMIC)
+    max_lmul = MIN (max_lmul, (int) rvv_early_break_max_lmul);
+
   if (autovec_use_vlmax_p ())
     {
-      poly_uint64 full_size = BYTES_PER_RISCV_VECTOR * TARGET_MAX_LMUL;
+      poly_uint64 full_size = BYTES_PER_RISCV_VECTOR * max_lmul;
 
       /* Start with a RVV<LMUL>QImode where LMUL is the number of units that
 	 fit a whole vector.
@@ -3111,7 +3123,7 @@ autovectorize_vector_modes (vector_modes *modes, bool)
     }
     /* Push all VLSmodes according to TARGET_MIN_VLEN.  */
     unsigned int i = 0;
-    unsigned int base_size = TARGET_MIN_VLEN * TARGET_MAX_LMUL / 8;
+    unsigned int base_size = TARGET_MIN_VLEN * max_lmul / 8;
     unsigned int size = base_size;
     machine_mode mode;
     while (size > 0 && get_vector_mode (QImode, size).exists (&mode))
