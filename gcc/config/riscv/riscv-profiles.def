@@ -79,4 +79,9 @@ RISCV_PROFILE("rvb23s64",     "rv64imafdcb_zicsr_zicntr_zihpm_ziccif_ziccrse"
 				 "_ssccptr_sstvecd_sstvala_sscounterenw_svpbmt_svinval_svnapot"
 				 "_sstc_sscofpmf_ssu64xl_supm_zifencei")
 
+/* pcore is a custom 64-bit RISC-V profile targeting a general-purpose
+   out-of-order core with base integer, multiply, atomics, single/double FP,
+   compressed, and the standard Zicsr/Zifencei system extensions.  */
+RISCV_PROFILE("pcore",        "rv64imafdc_zicsr_zifencei")
+
 #undef RISCV_PROFILE

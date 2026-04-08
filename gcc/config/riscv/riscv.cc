@@ -688,6 +688,32 @@ static const struct riscv_tune_param tt_ascalon_d8_tune_info = {
   true,						/* prefer-agnostic.  */
 };
 
+/* Costs to use when optimizing for mycore1 (initial values based on
+   tt-ascalon-d8; to be tuned with performance data later).  */
+static const struct riscv_tune_param mycore1_tune_info = {
+  {COSTS_N_INSNS (2), COSTS_N_INSNS (2)},	/* fp_add */
+  {COSTS_N_INSNS (3), COSTS_N_INSNS (3)},	/* fp_mul */
+  {COSTS_N_INSNS (9), COSTS_N_INSNS (16)},	/* fp_div */
+  {COSTS_N_INSNS (3), COSTS_N_INSNS (3)},	/* int_mul */
+  {COSTS_N_INSNS (13), COSTS_N_INSNS (13)},	/* int_div */
+  8,						/* issue_rate */
+  4,						/* branch_cost */
+  4,						/* memory_cost */
+  4,						/* fmv_cost */
+  false,					/* slow_unaligned_access */
+  true,						/* vector_unaligned_access */
+  true,						/* use_divmod_expansion */
+  true,						/* overlap_op_by_pieces */
+  true,						/* use_zero_stride_load */
+  false,					/* speculative_sched_vsetvl */
+  RISCV_FUSE_NOTHING,                           /* fusible_ops */
+  &generic_vector_cost,				/* vector cost */
+  NULL,						/* function_align */
+  NULL,						/* jump_align */
+  NULL,						/* loop_align */
+  true,						/* prefer-agnostic.  */
+};
+
 /* Costs to use when optimizing for size.  */
 static const struct riscv_tune_param optimize_size_tune_info = {
   {COSTS_N_INSNS (1), COSTS_N_INSNS (1)},	/* fp_add */
