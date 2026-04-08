@@ -126,6 +126,7 @@ extern opt_machine_mode default_get_mask_mode (machine_mode);
 extern bool default_empty_mask_is_expensive (unsigned);
 extern bool default_conditional_operation_is_expensive (unsigned);
 extern vector_costs *default_vectorize_create_costs (vec_info *, bool);
+extern void default_vectorize_set_early_break_vectorization (bool);
 
 /* OpenACC hooks.  */
 extern bool default_goacc_validate_dims (tree, int [], int, unsigned);

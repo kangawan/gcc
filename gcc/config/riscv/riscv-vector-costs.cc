@@ -89,6 +89,11 @@ namespace riscv_vector {
 	 3. M1(M8) -> MF2(M4) -> MF4(M2) -> MF8(M1)
 */
 
+/* Heavy cost penalty applied to early-break loop vectorization when the
+   iteration count is known to be at most one vector-width (VF).  This
+   steers the vectorizer toward a smaller LMUL or scalar code.  */
+static const unsigned int EARLY_BREAK_SMALL_LOOP_PENALTY = 99999;
+
 static bool
 is_gimple_assign_or_call (gimple *stmt)
 {
@@ -1484,6 +1489,29 @@ costs::finish_cost (const vector_costs *scalar_costs)
       record_lmul_spills (loop_vinfo);
 
       adjust_vect_cost_per_loop (loop_vinfo);
+
+      /* Cost model penalty for early-break loops with known small
+	 iteration counts.  When the total iteration count is at most
+	 one full vector width (VF), using a large LMUL is almost
+	 certainly unprofitable: the prologue / epilogue overhead
+	 outweighs any benefit.  Assign a heavy body-cost penalty to
+	 steer the vectorizer toward a smaller mode or scalar code.  */
+      if (LOOP_VINFO_EARLY_BREAKS (loop_vinfo)
+	  && LOOP_VINFO_NITERS_KNOWN_P (loop_vinfo))
+	{
+	  unsigned HOST_WIDE_INT niters
+	    = LOOP_VINFO_INT_NITERS (loop_vinfo);
+	  unsigned int vf = vect_vf_for_cost (loop_vinfo);
+	  if (niters <= vf)
+	    {
+	      if (dump_enabled_p ())
+		dump_printf_loc (MSG_NOTE, vect_location,
+				 "Penalizing early-break loop vectorization:"
+				 " known niters (%wu) <= vf (%u).\n",
+				 niters, vf);
+	      m_costs[vect_body] += EARLY_BREAK_SMALL_LOOP_PENALTY;
+	    }
+	}
     }
   vector_costs::finish_cost (scalar_costs);
 }
