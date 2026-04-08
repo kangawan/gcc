@@ -1110,6 +1110,39 @@ costs::better_main_loop_than_p (const vector_costs *uncast_other) const
 		     GET_MODE_NAME (other_loop_vinfo->vector_mode),
 		     vect_vf_for_cost (other_loop_vinfo));
 
+  /* If -mrvv-early-break-max-lmul= is explicitly set and this loop has early
+     breaks, enforce the LMUL constraint by preferring loops that satisfy it
+     over loops that do not.  */
+  if (LOOP_VINFO_EARLY_BREAKS (this_loop_vinfo)
+      && rvv_early_break_max_lmul != RVV_DYNAMIC
+      && rvv_early_break_max_lmul != RVV_CONV_DYNAMIC)
+    {
+      int this_lmul = riscv_get_v_regno_alignment (this_loop_vinfo->vector_mode);
+      int other_lmul
+	= riscv_get_v_regno_alignment (other_loop_vinfo->vector_mode);
+      int max_lmul = TARGET_EARLY_BREAK_MAX_LMUL;
+
+      if (other_lmul <= max_lmul && this_lmul > max_lmul)
+	{
+	  if (dump_enabled_p ())
+	    dump_printf_loc (MSG_NOTE, vect_location,
+			     "Preferring smaller LMUL=%d early-break loop"
+			     " (max allowed LMUL=%d)\n",
+			     other_lmul, max_lmul);
+	  return true;
+	}
+      else if (this_lmul <= max_lmul && other_lmul > max_lmul)
+	{
+	  if (dump_enabled_p ())
+	    dump_printf_loc (MSG_NOTE, vect_location,
+			     "Keeping current LMUL=%d early-break loop"
+			     " (other LMUL=%d exceeds max allowed"
+			     " LMUL=%d)\n",
+			     this_lmul, other_lmul, max_lmul);
+	  return false;
+	}
+    }
+
   /* Apply the unrolling heuristic described above m_unrolled_vls_niters.  */
   if (bool (m_unrolled_vls_stmts) != bool (other->m_unrolled_vls_stmts)
       && m_cost_type != other->m_cost_type)
