@@ -328,6 +328,10 @@ mrvv-max-lmul=
 Target RejectNegative Joined Enum(rvv_max_lmul) Var(rvv_max_lmul) Init(RVV_M1)
 -mrvv-max-lmul=<string>	Set the RVV LMUL of auto-vectorization.
 
+mrvv-early-break-max-lmul=
+Target RejectNegative Joined Enum(rvv_max_lmul) Var(rvv_early_break_max_lmul) Init(RVV_DYNAMIC)
+-mrvv-early-break-max-lmul=<string>	Set the maximum RVV LMUL for early-break loop auto-vectorization.
+
 madjust-lmul-cost
 Target Var(TARGET_ADJUST_LMUL_COST) Init(0)
 

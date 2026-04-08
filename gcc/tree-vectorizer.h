@@ -2996,4 +2996,34 @@ vect_is_integer_truncation (stmt_vec_info stmt_info)
 /* Build a GIMPLE_ASSIGN or GIMPLE_CALL with the tree_code,
    or internal_fn contained in ch, respectively.  */
 gimple * vect_gimple_build (tree, code_helper, tree, tree = NULL_TREE);
+
+/* Global flag set to true while vectorizing a loop that has early breaks
+   (multiple exits).  Target hooks such as autovectorize_vector_modes can
+   query this to adjust their behaviour for early-break loops.  */
+extern bool vect_loop_in_early_break;
+
+/* RAII guard that sets vect_loop_in_early_break for the duration of one
+   loop analysis pass and restores the previous value on destruction.  */
+class early_break_vectorization_guard
+{
+public:
+  early_break_vectorization_guard (bool has_early_breaks)
+    : m_saved (vect_loop_in_early_break)
+  {
+    vect_loop_in_early_break = has_early_breaks;
+  }
+  ~early_break_vectorization_guard ()
+  {
+    vect_loop_in_early_break = m_saved;
+  }
+
+  early_break_vectorization_guard (const early_break_vectorization_guard &)
+    = delete;
+  early_break_vectorization_guard &
+  operator= (const early_break_vectorization_guard &) = delete;
+
+private:
+  bool m_saved;
+};
+
 #endif  /* GCC_TREE_VECTORIZER_H  */
