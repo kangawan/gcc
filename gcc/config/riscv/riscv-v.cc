@@ -55,6 +55,14 @@
 
 using namespace riscv_vector;
 
+/* When true, the loop currently being analyzed by the vectorizer has early
+   breaks.  In that case TARGET_MAX_LMUL returns RVV_M8 regardless of the
+   user-specified -mrvv-max-lmul option, allowing the vectorizer to consider
+   wider vector modes for such loops.  This variable lives outside the
+   riscv_vector namespace so that it is accessible via the TARGET_MAX_LMUL
+   macro defined in riscv-opts.h.  */
+bool riscv_early_break_vectorization_p = false;
+
 namespace riscv_vector {
 
 /* Return true if NUNITS <=31 so that we can use immediate AVL in vsetivli.  */
@@ -3070,6 +3078,13 @@ get_cmp_insn_code (rtx_code code, machine_mode mode)
       gcc_unreachable ();
     }
   return icode;
+}
+
+/* Implement TARGET_VECTORIZE_SET_EARLY_BREAK_VECTORIZATION.  */
+void
+set_early_break_vectorization (bool is_early_break)
+{
+  riscv_early_break_vectorization_p = is_early_break;
 }
 
 /* This hook gives the vectorizer more vector mode options.  We want it to not

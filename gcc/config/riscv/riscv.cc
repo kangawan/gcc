@@ -14155,6 +14155,14 @@ riscv_mode_priority (int, int n)
   return n;
 }
 
+/* Implement TARGET_VECTORIZE_SET_EARLY_BREAK_VECTORIZATION.  */
+static void
+riscv_set_early_break_vectorization (bool is_early_break)
+{
+  if (TARGET_VECTOR && !TARGET_XTHEADVECTOR)
+    riscv_vector::set_early_break_vectorization (is_early_break);
+}
+
 /* Implement TARGET_VECTORIZE_AUTOVECTORIZE_VECTOR_MODES.  */
 unsigned int
 riscv_autovectorize_vector_modes (vector_modes *modes, bool all)
@@ -16892,6 +16900,10 @@ riscv_prefetch_offset_address_p (rtx x, machine_mode mode)
 #undef TARGET_VECTORIZE_AUTOVECTORIZE_VECTOR_MODES
 #define TARGET_VECTORIZE_AUTOVECTORIZE_VECTOR_MODES \
   riscv_autovectorize_vector_modes
+
+#undef TARGET_VECTORIZE_SET_EARLY_BREAK_VECTORIZATION
+#define TARGET_VECTORIZE_SET_EARLY_BREAK_VECTORIZATION \
+  riscv_set_early_break_vectorization
 
 #undef TARGET_VECTORIZE_RELATED_MODE
 #define TARGET_VECTORIZE_RELATED_MODE riscv_vectorize_related_mode

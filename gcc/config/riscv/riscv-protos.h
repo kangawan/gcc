@@ -773,6 +773,7 @@ enum floating_point_rounding_mode get_frm_mode (rtx);
 opt_machine_mode vectorize_related_mode (machine_mode, scalar_mode,
 					 poly_uint64);
 unsigned int autovectorize_vector_modes (vec<machine_mode> *, bool);
+void set_early_break_vectorization (bool);
 bool cmp_lmul_le_one (machine_mode);
 bool cmp_lmul_gt_one (machine_mode);
 bool vls_mode_valid_p (machine_mode, bool allow_up_to_lmul_8 = true);
