@@ -10418,13 +10418,15 @@ vectorizable_live_operation (vec_info *vinfo, stmt_vec_info stmt_info,
 				      unshare_expr (base_expr),
 				      gimple_convert (&stmts, sizetype, off));
 		  else
-		    new_tree
-		      = gimple_convert (
-			  &stmts, lhs_type,
-			  gimple_build (&stmts, PLUS_EXPR, stype,
-					gimple_convert (&stmts, stype,
-							unshare_expr (base_expr)),
-					off));
+		    {
+		      tree base_in_stype
+			= gimple_convert (&stmts, stype,
+					  unshare_expr (base_expr));
+		      tree sum
+			= gimple_build (&stmts, PLUS_EXPR, stype,
+					base_in_stype, off);
+		      new_tree = gimple_convert (&stmts, lhs_type, sum);
+		    }
 		  exit_gsi = gsi_after_labels (e->dest);
 		  if (stmts)
 		    gsi_insert_seq_before (&exit_gsi, stmts, GSI_SAME_STMT);
