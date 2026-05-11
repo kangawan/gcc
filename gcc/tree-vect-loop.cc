@@ -10375,7 +10375,62 @@ vectorizable_live_operation (vec_info *vinfo, stmt_vec_info stmt_info,
 		}
 
 	      gimple_stmt_iterator exit_gsi;
-	      tree new_tree
+	      tree new_tree;
+
+	      /* For early break with a linear induction variable, avoid
+		 extracting from the vector IV (which would force it to stay
+		 alive inside the loop).  Instead compute the live-out scalar
+		 value directly using scalar arithmetic:
+
+		   final_val = base + niters_var * step
+
+		 where niters_var is the scalar iteration counter maintained
+		 by vect_update_ivs_after_vectorizer_for_early_breaks.  This
+		 allows DCE to remove the otherwise dead vector IV, eliminating
+		 redundant vmv/vadd instructions on architectures like RVV.  */
+	      if (early_break_first_element_p
+		  && STMT_VINFO_DEF_TYPE (stmt_info) == vect_induction_def
+		  && (STMT_VINFO_LOOP_PHI_EVOLUTION_TYPE (stmt_info)
+		      == vect_step_op_add)
+		  && LOOP_VINFO_EARLY_BRK_NITERS_VAR (loop_vinfo))
+		{
+		  tree base_expr
+		    = STMT_VINFO_LOOP_PHI_EVOLUTION_BASE_UNCHANGED (stmt_info);
+		  tree step_expr
+		    = unshare_expr (STMT_VINFO_LOOP_PHI_EVOLUTION_PART (stmt_info));
+		  tree niters_var = LOOP_VINFO_EARLY_BRK_NITERS_VAR (loop_vinfo);
+
+		  if (dump_enabled_p ())
+		    dump_printf_loc (MSG_NOTE, vect_location,
+				     "using scalar math for linear IV "
+				     "live-out on early break exit.\n");
+
+		  gimple_seq stmts = NULL;
+		  tree stype = TREE_TYPE (step_expr);
+		  /* Compute offset = niters_var * step.  */
+		  tree off
+		    = gimple_build (&stmts, MULT_EXPR, stype,
+				    gimple_convert (&stmts, stype, niters_var),
+				    step_expr);
+		  if (POINTER_TYPE_P (lhs_type))
+		    new_tree
+		      = gimple_build (&stmts, POINTER_PLUS_EXPR, lhs_type,
+				      unshare_expr (base_expr),
+				      gimple_convert (&stmts, sizetype, off));
+		  else
+		    new_tree
+		      = gimple_convert (
+			  &stmts, lhs_type,
+			  gimple_build (&stmts, PLUS_EXPR, stype,
+					gimple_convert (&stmts, stype,
+							unshare_expr (base_expr)),
+					off));
+		  exit_gsi = gsi_after_labels (e->dest);
+		  if (stmts)
+		    gsi_insert_seq_before (&exit_gsi, stmts, GSI_SAME_STMT);
+		}
+	      else
+		new_tree
 		  = vectorizable_live_operation_1 (loop_vinfo,
 						   e->dest, vectype,
 						   slp_node, bitsize,
