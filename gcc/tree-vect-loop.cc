@@ -11201,10 +11201,6 @@ vect_update_ivs_after_vectorizer_for_early_breaks (loop_vec_info loop_vinfo)
       iter_var = gimple_build (&stmts, PLUS_EXPR, ty_var, induc_def, offset);
     }
 
-  /* Record iter_var so vectorizable_live_operation can use it for the main
-     exit (no-match / fallthrough case): final_val = base + iter_var * step.  */
-  LOOP_VINFO_EARLY_BRK_NITERS_ITER_VAR (loop_vinfo) = iter_var;
-
   tree init_var = build_zero_cst (ty_var);
   if (niters_skip)
     init_var = gimple_build (&init_stmts, MINUS_EXPR, ty_var, init_var,

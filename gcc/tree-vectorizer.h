@@ -1254,11 +1254,10 @@ public:
      inside the relevant exit blocks in order to adjust for early break.  */
   tree early_break_niters_var;
 
-  /* The "next iteration" value of early_break_niters_var, i.e. induc + VF.
-     This equals the total number of scalar iterations processed by the vector
-     loop and is used to compute live-out linear IV values at the main exit
-     (no-match / fallthrough case) via scalar math rather than vector
-     extraction.  */
+  /* The total number of scalar iterations consumed by the vector loop on the
+     main exit of a non-peeled early-break loop.  This is computed outside the
+     loop and is used to scalarize live-out linear IVs on the main
+     (no-match / fallthrough) exit without relying on vector extraction.  */
   tree early_break_niters_iter_var;
 
   /* The type of the variable to be used to create the scalar IV for early break

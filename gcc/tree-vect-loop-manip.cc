@@ -3782,6 +3782,9 @@ vect_do_peeling (loop_vec_info loop_vinfo, tree niters, tree nitersm1,
 	    vector_iters_vf = tmp_niters_vf;
 
 	  LOOP_VINFO_EARLY_BRK_NITERS_VAR (loop_vinfo) = tmp_niters_vf;
+	  LOOP_VINFO_EARLY_BRK_NITERS_ITER_VAR (loop_vinfo)
+	    = (LOOP_VINFO_EARLY_BREAKS_VECT_PEELED (loop_vinfo)
+	       ? NULL_TREE : niters_vector_mult_vf);
 	}
 
 	bool recalculate_peel_niters_init
