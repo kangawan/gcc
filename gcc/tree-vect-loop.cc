@@ -10375,7 +10375,93 @@ vectorizable_live_operation (vec_info *vinfo, stmt_vec_info stmt_info,
 		}
 
 	      gimple_stmt_iterator exit_gsi;
-	      tree new_tree
+	      tree new_tree;
+
+	      /* For early-break loops with a linear induction variable, avoid
+		 extracting from the vector IV.  Instead compute the live-out
+		 scalar value directly via scalar arithmetic:
+
+		   final_val = base + niters_var * step
+
+		 where niters_var is:
+		   - For early exits (first-element path): the scalar counter
+		     LOOP_VINFO_EARLY_BRK_NITERS_VAR (phi_var = k*VF), which
+		     gives element 0 of the current vector chunk; the scalar
+		     epilogue then re-runs that chunk to find the exact position.
+		   - For the main exit of a non-peeled early-break loop:
+		     LOOP_VINFO_EARLY_BRK_NITERS_ITER_VAR (iter_var = K*VF),
+		     which equals the total number of scalar iterations the
+		     vector loop processed.
+
+		 Using scalar math for both exits makes the vector IV dead inside
+		 the loop, allowing DCE to remove the redundant vmv/vadd
+		 instructions on targets like RVV.  */
+	      if (STMT_VINFO_DEF_TYPE (stmt_info) == vect_induction_def
+		  && (STMT_VINFO_LOOP_PHI_EVOLUTION_TYPE (stmt_info)
+		      == vect_step_op_add))
+		{
+		  tree niters_var = NULL_TREE;
+		  if (early_break_first_element_p)
+		    niters_var = LOOP_VINFO_EARLY_BRK_NITERS_VAR (loop_vinfo);
+		  else if (LOOP_VINFO_EARLY_BREAKS (loop_vinfo))
+		    niters_var
+		      = LOOP_VINFO_EARLY_BRK_NITERS_ITER_VAR (loop_vinfo);
+
+		  if (niters_var)
+		    {
+		      tree base_expr
+			= STMT_VINFO_LOOP_PHI_EVOLUTION_BASE_UNCHANGED (stmt_info);
+		      tree step_expr
+			= unshare_expr (STMT_VINFO_LOOP_PHI_EVOLUTION_PART (stmt_info));
+
+		      if (dump_enabled_p ())
+			dump_printf_loc (MSG_NOTE, vect_location,
+					 "using scalar math for linear IV "
+					 "live-out on %s exit.\n",
+					 early_break_first_element_p
+					 ? "early break" : "main");
+
+		      gimple_seq stmts = NULL;
+		      tree stype = TREE_TYPE (step_expr);
+		      /* Compute offset = niters_var * step.  */
+		      tree off
+			= gimple_build (&stmts, MULT_EXPR, stype,
+					gimple_convert (&stmts, stype,
+							niters_var),
+					step_expr);
+		      if (POINTER_TYPE_P (lhs_type))
+			new_tree
+			  = gimple_build (&stmts, POINTER_PLUS_EXPR,
+					  lhs_type,
+					  unshare_expr (base_expr),
+					  gimple_convert (&stmts, sizetype,
+							  off));
+		      else
+			{
+			  tree base_in_stype
+			    = gimple_convert (&stmts, stype,
+					      unshare_expr (base_expr));
+			  tree sum
+			    = gimple_build (&stmts, PLUS_EXPR, stype,
+					    base_in_stype, off);
+			  new_tree = gimple_convert (&stmts, lhs_type, sum);
+			}
+		      exit_gsi = gsi_after_labels (e->dest);
+		      if (stmts)
+			gsi_insert_seq_before (&exit_gsi, stmts,
+					       GSI_SAME_STMT);
+		    }
+		  else
+		    new_tree
+		      = vectorizable_live_operation_1 (loop_vinfo,
+						       e->dest, vectype,
+						       slp_node, bitsize,
+						       tmp_bitstart,
+						       tmp_vec_lhs,
+						       lhs_type, &exit_gsi);
+		}
+	      else
+		new_tree
 		  = vectorizable_live_operation_1 (loop_vinfo,
 						   e->dest, vectype,
 						   slp_node, bitsize,
@@ -11114,6 +11200,10 @@ vect_update_ivs_after_vectorizer_for_early_breaks (loop_vec_info loop_vinfo)
       tree offset = gimple_convert (&stmts, ty_var, tree_vf);
       iter_var = gimple_build (&stmts, PLUS_EXPR, ty_var, induc_def, offset);
     }
+
+  /* Record iter_var so vectorizable_live_operation can use it for the main
+     exit (no-match / fallthrough case): final_val = base + iter_var * step.  */
+  LOOP_VINFO_EARLY_BRK_NITERS_ITER_VAR (loop_vinfo) = iter_var;
 
   tree init_var = build_zero_cst (ty_var);
   if (niters_skip)

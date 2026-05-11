@@ -1254,6 +1254,13 @@ public:
      inside the relavent exit blocks in order to adjust for early break.  */
   tree early_break_niters_var;
 
+  /* The "next iteration" value of early_break_niters_var, i.e. induc + VF.
+     This equals the total number of scalar iterations processed by the vector
+     loop and is used to compute live-out linear IV values at the main exit
+     (no-match / fallthrough case) via scalar math rather than vector
+     extraction.  */
+  tree early_break_niters_iter_var;
+
   /* The type of the variable to be used to create the scalar IV for early break
      loops.  */
   tree early_break_iv_type;
@@ -1329,6 +1336,7 @@ public:
 #define LOOP_VINFO_EARLY_BRK_DEST_BB(L)    (L)->early_break_dest_bb
 #define LOOP_VINFO_EARLY_BRK_VUSES(L)      (L)->early_break_vuses
 #define LOOP_VINFO_EARLY_BRK_NITERS_VAR(L) (L)->early_break_niters_var
+#define LOOP_VINFO_EARLY_BRK_NITERS_ITER_VAR(L) (L)->early_break_niters_iter_var
 #define LOOP_VINFO_EARLY_BRK_IV_TYPE(L)    (L)->early_break_iv_type
 #define LOOP_VINFO_LOOP_CONDS(L)           (L)->conds
 #define LOOP_VINFO_LOOP_IV_COND(L)         (L)->loop_iv_cond
