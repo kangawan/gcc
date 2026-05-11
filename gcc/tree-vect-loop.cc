@@ -10406,6 +10406,17 @@ vectorizable_live_operation (vec_info *vinfo, stmt_vec_info stmt_info,
 		  else if (LOOP_VINFO_EARLY_BREAKS (loop_vinfo))
 		    niters_var
 		      = LOOP_VINFO_EARLY_BRK_NITERS_ITER_VAR (loop_vinfo);
+		  /* During early-break peeling the main-exit helper can be
+		     provisionally set to an SSA name whose defining stmt is a
+		     placeholder NOP and has no basic block yet.  In that case,
+		     fall back to lane extraction.  */
+		  if (niters_var
+		      && TREE_CODE (niters_var) == SSA_NAME)
+		    {
+		      gimple *def_stmt = SSA_NAME_DEF_STMT (niters_var);
+		      if (!gimple_bb (def_stmt))
+			niters_var = NULL_TREE;
+		    }
 
 		  if (niters_var)
 		    {
