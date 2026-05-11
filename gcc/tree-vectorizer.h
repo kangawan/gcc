@@ -1251,7 +1251,7 @@ public:
   auto_vec<gimple*> early_break_vuses;
 
   /* The IV adjustment value for inductions that needs to be materialized
-     inside the relavent exit blocks in order to adjust for early break.  */
+     inside the relevant exit blocks in order to adjust for early break.  */
   tree early_break_niters_var;
 
   /* The "next iteration" value of early_break_niters_var, i.e. induc + VF.
