@@ -10406,6 +10406,13 @@ vectorizable_live_operation (vec_info *vinfo, stmt_vec_info stmt_info,
 		  else if (LOOP_VINFO_EARLY_BREAKS (loop_vinfo))
 		    niters_var
 		      = LOOP_VINFO_EARLY_BRK_NITERS_ITER_VAR (loop_vinfo);
+		  if (dump_enabled_p ())
+		    dump_printf_loc (MSG_NOTE, vect_location,
+				     "early-break live-out: exit=%s "
+				     "dest_bb=%d selected niters_var=%T\n",
+				     early_break_first_element_p
+				     ? "early" : "main",
+				     e->dest->index, niters_var);
 		  /* During early-break peeling the main-exit helper can be
 		     provisionally set to an SSA name whose defining stmt is a
 		     placeholder NOP and has no basic block yet.  In that case,
@@ -10414,8 +10421,25 @@ vectorizable_live_operation (vec_info *vinfo, stmt_vec_info stmt_info,
 		      && TREE_CODE (niters_var) == SSA_NAME)
 		    {
 		      gimple *def_stmt = SSA_NAME_DEF_STMT (niters_var);
+		      if (dump_enabled_p ())
+			{
+			  dump_printf_loc (MSG_NOTE, vect_location,
+					   "early-break live-out: niters_var "
+					   "def stmt: %G", def_stmt);
+			  dump_printf_loc (MSG_NOTE, vect_location,
+					   "early-break live-out: niters_var "
+					   "def has_bb=%d\n",
+					   gimple_bb (def_stmt) != NULL);
+			}
 		      if (!gimple_bb (def_stmt))
-			niters_var = NULL_TREE;
+			{
+			  if (dump_enabled_p ())
+			    dump_printf_loc (MSG_NOTE, vect_location,
+					     "early-break live-out: fallback "
+					     "to lane extraction because "
+					     "niters_var def is provisional\n");
+			  niters_var = NULL_TREE;
+			}
 		    }
 
 		  if (niters_var)
@@ -10428,9 +10452,11 @@ vectorizable_live_operation (vec_info *vinfo, stmt_vec_info stmt_info,
 		      if (dump_enabled_p ())
 			dump_printf_loc (MSG_NOTE, vect_location,
 					 "using scalar math for linear IV "
-					 "live-out on %s exit.\n",
+					 "live-out on %s exit; niters_var=%T "
+					 "step=%T base=%T.\n",
 					 early_break_first_element_p
-					 ? "early break" : "main");
+					 ? "early break" : "main",
+					 niters_var, step_expr, base_expr);
 
 		      gimple_seq stmts = NULL;
 		      tree stype = TREE_TYPE (step_expr);
@@ -10463,13 +10489,21 @@ vectorizable_live_operation (vec_info *vinfo, stmt_vec_info stmt_info,
 					       GSI_SAME_STMT);
 		    }
 		  else
-		    new_tree
-		      = vectorizable_live_operation_1 (loop_vinfo,
-						       e->dest, vectype,
-						       slp_node, bitsize,
-						       tmp_bitstart,
-						       tmp_vec_lhs,
-						       lhs_type, &exit_gsi);
+		    {
+		      if (dump_enabled_p ())
+			dump_printf_loc (MSG_NOTE, vect_location,
+					 "early-break live-out: using lane "
+					 "extraction fallback on %s exit\n",
+					 early_break_first_element_p
+					 ? "early break" : "main");
+		      new_tree
+			= vectorizable_live_operation_1 (loop_vinfo,
+							 e->dest, vectype,
+							 slp_node, bitsize,
+							 tmp_bitstart,
+							 tmp_vec_lhs,
+							 lhs_type, &exit_gsi);
+		    }
 		}
 	      else
 		new_tree

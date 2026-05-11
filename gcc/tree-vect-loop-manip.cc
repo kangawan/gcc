@@ -3682,10 +3682,34 @@ vect_do_peeling (loop_vec_info loop_vinfo, tree niters, tree nitersm1,
 		= make_ssa_name (TREE_TYPE (*niters_vector));
 	      SSA_NAME_DEF_STMT (niters_vector_mult_vf) = gimple_build_nop ();
 	      *niters_vector_mult_vf_var = niters_vector_mult_vf;
+	      if (dump_enabled_p ())
+		{
+		  dump_printf_loc (MSG_NOTE, vect_location,
+				   "early-break peel: created provisional "
+				   "niters_vector_mult_vf=%T for step=%T\n",
+				   niters_vector_mult_vf, *step_vector);
+		  dump_printf_loc (MSG_NOTE, vect_location,
+				   "early-break peel: provisional def stmt: "
+				   "%G", SSA_NAME_DEF_STMT
+				   (niters_vector_mult_vf));
+		}
 	    }
 	  else
 	    vect_gen_vector_loop_niters_mult_vf (loop_vinfo, *niters_vector,
 						 &niters_vector_mult_vf);
+	  if (dump_enabled_p ())
+	    {
+	      dump_printf_loc (MSG_NOTE, vect_location,
+			       "early-break peel: niters_vector=%T "
+			       "step_vector=%T niters_vector_mult_vf=%T\n",
+			       *niters_vector, *step_vector,
+			       niters_vector_mult_vf);
+	      if (TREE_CODE (niters_vector_mult_vf) == SSA_NAME)
+		dump_printf_loc (MSG_NOTE, vect_location,
+				 "early-break peel: niters_vector_mult_vf "
+				 "def stmt: %G",
+				 SSA_NAME_DEF_STMT (niters_vector_mult_vf));
+	    }
 	  /* Update IVs of original loop as if they were advanced by
 	     niters_vector_mult_vf steps.  */
 	  gcc_checking_assert (vect_can_advance_ivs_p (loop_vinfo));
@@ -3785,6 +3809,15 @@ vect_do_peeling (loop_vec_info loop_vinfo, tree niters, tree nitersm1,
 	  LOOP_VINFO_EARLY_BRK_NITERS_ITER_VAR (loop_vinfo)
 	    = (LOOP_VINFO_EARLY_BREAKS_VECT_PEELED (loop_vinfo)
 	       ? NULL_TREE : niters_vector_mult_vf);
+	  if (dump_enabled_p ())
+	    dump_printf_loc (MSG_NOTE, vect_location,
+			     "early-break peel: set niters vars: "
+			     "EARLY_BRK_NITERS_VAR=%T "
+			     "EARLY_BRK_NITERS_ITER_VAR=%T "
+			     "(vect_peeled=%d)\n",
+			     LOOP_VINFO_EARLY_BRK_NITERS_VAR (loop_vinfo),
+			     LOOP_VINFO_EARLY_BRK_NITERS_ITER_VAR (loop_vinfo),
+			     LOOP_VINFO_EARLY_BREAKS_VECT_PEELED (loop_vinfo));
 	}
 
 	bool recalculate_peel_niters_init
